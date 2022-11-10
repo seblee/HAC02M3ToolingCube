@@ -37,14 +37,14 @@
 /* Private includes ----------------------------------------------------------*/
 #include <stdio.h>
 #include <string.h>
-#include "cmsis_os.h"  // CMSIS RTOS header file
-#include "stm32f1xx_hal.h"
-#include "userType.h"
+#include "cmsis_os.h"    // CMSIS RTOS header file
 #define osObjectsPublic  // define objects in main module
 #include "bsp_user_lib.h"
 #include "modbus_host.h"
 #include "osObjects.h"  // RTOS object definitions
 #include "stdlib.h"
+#include "stm32f1xx_hal.h"
+#include "userType.h"
 #include "user_data.h"
 /* Private typedef -----------------------------------------------------------*/
 
@@ -197,9 +197,8 @@ void testFun(void)
     }
 
     switch (_status_ICT.u16Status) {
-        case ICT_IDLE:
-        {
-            if (l_sys.u8ICT_PowerKey == TRUE) {  //上电
+        case ICT_IDLE: {
+            if (l_sys.u8ICT_PowerKey == TRUE) {  // 上电
                 l_sys.u16ICT_Delay       = 500;
                 l_sys.u8ICT_Start        = TRUE;
                 _status_ICT.VALUE_12V    = 0;  // 00
@@ -246,8 +245,7 @@ void testFun(void)
             }
             break;
         }
-        case ICT_START:
-        {
+        case ICT_START: {
             if (l_sys.u16ICT_Delay) {
                 l_sys.u16ICT_Delay--;
             } else {
@@ -265,8 +263,7 @@ void testFun(void)
             }
             break;
         }
-        case ICT_TEST:
-        {
+        case ICT_TEST: {
             static uint16_t ICTDelay[4] = {0};
             static uint8_t  timeout[4]  = {0};
             // LINE_1:
@@ -669,8 +666,7 @@ void testFun(void)
 
             break;
         }
-        case ICT_STOP:
-        {
+        case ICT_STOP: {
             _status_ICT.u16Status = ICT_IDLE;
             l_sys.u8ICT_PowerKey  = FALSE;
             if (MODH_WriteParam_06H(SlaveHMIAddr, 0xA02a, _status_ICT.u16Fsm) == 1) {
@@ -689,8 +685,7 @@ void testFun(void)
             NO7(GPIO_PIN_RESET);
             NO8(GPIO_PIN_RESET);
         } break;
-        default:
-        {
+        default: {
             _status_ICT.u16Status = ICT_IDLE;
             l_sys.u8ICT_PowerKey  = FALSE;
         }
