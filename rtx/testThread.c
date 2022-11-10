@@ -95,6 +95,17 @@ volatile _TKS_FLAGA_type CONNECTEFlags = {0};
 #define COMOKP3FLAG   CONNECTEFlags.bits.b4
 /* Public variables ---------------------------------------------------------*/
 
+#define __DEBUG
+
+#ifdef __DEBUG
+#define normal_info(format, ...)  printf("[Line: %d][%s]: \033[32m" format "\033[32;0m", __LINE__, __func__, ##__VA_ARGS__)
+#define warning_info(format, ...) printf("[Line: %d][%s]: \033[33m" format "\033[32;0m", __LINE__, __func__, ##__VA_ARGS__)
+#define error_info(format, ...)   printf("[Line: %d][%s]: \033[31m" format "\033[32;0m", __LINE__, __func__, ##__VA_ARGS__)
+#else
+#define normal_info(format, ...)
+#define warn_info(format, ...)
+#define error_info(format, ...)
+#endif
 /* Private function prototypes -----------------------------------------------*/
 static void keyScan(void);
 void        testFun(void);
@@ -221,7 +232,7 @@ void testFun(void)
                 NO4(GPIO_PIN_RESET);
                 NO5(GPIO_PIN_RESET);
                 NO6(GPIO_PIN_RESET);
-                NO7(GPIO_PIN_SET);
+                NO7(GPIO_PIN_RESET);
                 NO8(GPIO_PIN_SET);
 
                 ICT_test           = 0;
@@ -230,7 +241,7 @@ void testFun(void)
                 if (MODH_WriteParam_06H(SlaveHMIAddr, 0xa02a, _status_ICT.u16Fsm) == 1) {
                     // printf("**HMIAddr WriteParam 06H OK line:%d\r\n", __LINE__);
                 } else {
-                    printf("hmi write06 error\r\n");
+                    error_info("hmi write06 error\r\n");
                 }
             } else {
                 _status_ICT.u16Status = ICT_IDLE;
@@ -256,7 +267,7 @@ void testFun(void)
                 if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA020, 10, (uint8_t *)(&_status_ICT.VALUE_12V)) == 1) {
                     // printf("**HMIAddr WriteParam 10H OK line:%d\r\n", __LINE__);
                 } else {
-                    printf("hmi write10 error\r\n");
+                    error_info("hmi write10 error\r\n");
                 }
                 l_sys.u16ICT_Delay    = 300;  // wait AI ready
                 _status_ICT.u16Status = ICT_TEST;
@@ -364,7 +375,7 @@ void testFun(void)
                 if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA020, 4, (uint8_t *)(&_status_ICT.VALUE_12V)) == 1) {
                     // printf("**HMIAddr WriteParam 10H OK line:%d\r\n", __LINE__);
                 } else {
-                    printf("hmi write10 error\r\n");
+                    error_info("hmi write10 error\r\n");
                 }
 
                 printf("ICT_test:%04x\r\n", ICT_test);
@@ -388,7 +399,7 @@ void testFun(void)
                 } else {
                     timeout[1]++;
                     ICTDelay[1] = 60;
-                    printf("write06 error\r\n");
+                    error_info("write06 error\r\n");
                     goto LINE3;
                 }
                 printf("ICTStep:0x0080-->");
@@ -399,7 +410,7 @@ void testFun(void)
                 } else {
                     timeout[1]++;
                     ICTDelay[1] = 60;
-                    printf("write06 error\r\n");
+                    error_info("write06 error\r\n");
                     goto LINE3;
                 }
                 printf("ICTStep:0x0080-->");
@@ -411,7 +422,7 @@ void testFun(void)
                 } else {
                     timeout[1]++;
                     ICTDelay[1] = 60;
-                    printf("write06 error\r\n");
+                    error_info("write06 error\r\n");
                     goto LINE3;
                 }
                 goto LINE3;
@@ -423,7 +434,7 @@ void testFun(void)
                         UARTOKP24FLAG = 1;
                     }
                 } else {
-                    printf("ICTStep:0x0100-->read03H error\r\n");
+                    error_info("ICTStep:0x0100-->read03H error\r\n");
                     timeout[1]++;
                     ICTDelay[1] = 60;
                 }
@@ -442,11 +453,11 @@ void testFun(void)
                         ICTStep |= 0x0100;
                         ICTDelay[1] = 500;
                     } else {
-                        printf("ICTStep:0x0100-->write06 error\r\n");
+                        error_info("ICTStep:0x0100-->write06 error\r\n");
                         ICTDelay[1] = 60;
                     }
                 } else {
-                    printf("ICTStep:0x0100-->read03H error\r\n");
+                    error_info("ICTStep:0x0100-->read03H error\r\n");
                     timeout[1]++;
                     ICTDelay[1] = 60;
                 }
@@ -462,7 +473,7 @@ void testFun(void)
                     }
                 } else {
                     timeout[1]++;
-                    printf("write03 error\r\n");
+                    error_info("write03 error\r\n");
                     ICTDelay[1] = 60;
                     goto LINE3;
                 }
@@ -484,10 +495,10 @@ void testFun(void)
                     if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA024, 4, (uint8_t *)(&_status_ICT.IO_0)) == 1) {
                         // printf("**HMIAddr WriteParam 10H OK line:%d\r\n", __LINE__);
                     } else {
-                        printf("hmi write10 error\r\n");
+                        error_info("hmi write10 error\r\n");
                     }
                 } else {
-                    printf("write03 error\r\n");
+                    error_info("write03 error\r\n");
                     ICTDelay[1] = 60;
                 }
                 goto LINE3;
@@ -518,7 +529,7 @@ void testFun(void)
                     else
                         _status_ICT.NTC_COM |= NTC4Flag;
                 } else {
-                    printf("write03 error\r\n");
+                    error_info("write03 error\r\n");
                     goto LINE3;
                 }
                 printf("ICTStep:0x0400-->");
@@ -529,7 +540,7 @@ void testFun(void)
                         COMOKP3FLAG = 1;
                     }
                 } else {
-                    printf("write03 error\r\n");
+                    error_info("write03 error\r\n");
                 }
                 goto LINE3;
             }
@@ -543,7 +554,7 @@ void testFun(void)
                         flag        = 10;
                     } else {
                         flag++;
-                        printf("282 write06 error\r\n");
+                        error_info("282 write06 error\r\n");
                         ICTDelay[1] = 10;
                     }
                     goto LINE3;
@@ -587,7 +598,7 @@ void testFun(void)
                         ICT_test |= EEPROM_ERROR;
                     }
                 } else {
-                    printf("write03 error\r\n");
+                    error_info("write03 error\r\n");
                     goto LINE3;
                 }
                 ICTStep |= 0x2000;
@@ -636,7 +647,7 @@ void testFun(void)
                 if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA028, 2, (uint8_t *)(&_status_ICT.NTC_COM)) == 1) {
                     // printf("**HMIAddr WriteParam 10H OK line:%d\r\n", __LINE__);
                 } else {
-                    printf("hmi write10 error\r\n");
+                    error_info("hmi write10 error\r\n");
                 }
 
                 timeout[1] = 0;
@@ -651,14 +662,14 @@ void testFun(void)
                             timeout[1]++;
                             goto RESET_PARA;
                         }
-                        printf("write06 error\r\n");
+                        error_info("write06 error\r\n");
                     }
                 } else {
                     if (timeout[1] < 3) {
                         timeout[1]++;
                         goto RESET_PARA;
                     }
-                    printf("write06 error\r\n");
+                    error_info("write06 error\r\n");
                 }
 
                 _status_ICT.u16Status = ICT_STOP;
@@ -672,7 +683,7 @@ void testFun(void)
             if (MODH_WriteParam_06H(SlaveHMIAddr, 0xA02a, _status_ICT.u16Fsm) == 1) {
                 // printf("**HMIAddr WriteParam 06H OK line:%d\r\n",__LINE__);
             } else {
-                printf("hmi write06 error\r\n");
+                error_info("hmi write06 error\r\n");
             }
             printf("ICT_STOP\r\n\n");
 
