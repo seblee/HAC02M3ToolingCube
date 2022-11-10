@@ -95,17 +95,6 @@ volatile _TKS_FLAGA_type CONNECTEFlags = {0};
 #define COMOKP3FLAG   CONNECTEFlags.bits.b4
 /* Public variables ---------------------------------------------------------*/
 
-#define __DEBUG
-
-#ifdef __DEBUG
-#define normal_info(format, ...)  printf("[Line: %d][%s]: \033[32m" format "\033[32;0m", __LINE__, __func__, ##__VA_ARGS__)
-#define warning_info(format, ...) printf("[Line: %d][%s]: \033[33m" format "\033[32;0m", __LINE__, __func__, ##__VA_ARGS__)
-#define error_info(format, ...)   printf("[Line: %d][%s]: \033[31m" format "\033[32;0m", __LINE__, __func__, ##__VA_ARGS__)
-#else
-#define normal_info(format, ...)
-#define warn_info(format, ...)
-#define error_info(format, ...)
-#endif
 /* Private function prototypes -----------------------------------------------*/
 static void keyScan(void);
 void        testFun(void);
@@ -133,7 +122,7 @@ int Init_testThread(void)
     NO6(GPIO_PIN_RESET);
     NO7(GPIO_PIN_RESET);
     NO8(GPIO_PIN_RESET);
-    printf("###########testThread ready######\r\n");
+    normal_info("###########testThread ready######\r\n");
     return (0);
 }
 
@@ -197,7 +186,7 @@ void testFun(void)
     static uint16_t ICTStep  = 0;
 
     if (STARTTrg) {
-        printf("ICT_START\r\n");
+        normal_info("ICT_START\r\n");
         l_sys.u8ICT_PowerKey = TRUE;
         if (_status_ICT.u16Status == ICT_STOP)
             _status_ICT.u16Status = ICT_IDLE;
@@ -231,7 +220,7 @@ void testFun(void)
                 NO3(GPIO_PIN_RESET);
                 NO4(GPIO_PIN_RESET);
                 NO5(GPIO_PIN_RESET);
-                NO6(GPIO_PIN_RESET);
+                NO6(GPIO_PIN_SET);
                 NO7(GPIO_PIN_RESET);
                 NO8(GPIO_PIN_SET);
 
@@ -278,13 +267,14 @@ void testFun(void)
             static uint16_t ICTDelay[4] = {0};
             static uint8_t  timeout[4]  = {0};
             // LINE_1:
+            goto LINE_2;
             if (ICTDelay[0]) {
                 ICTDelay[0]--;
                 goto LINE_2;
             }
 
             if ((ICTStep & 0x0001) == 0) {
-                printf("ICTStep:0x0001-->12V\t");
+                normal_info("ICTStep:0x0001-->12V\t");
                 _status_ICT.VALUE_12V = ADCVAlueAverage[1] * 330 * 20 / 2.49 / 4095;
                 _status_ICT.VALUE_12V = BEBufToUint16((uint8_t *)&_status_ICT.VALUE_12V);
                 if (abs(ADCVAlueAverage[1] - VOL_12V) > 125) {  // VOL_12V
@@ -311,7 +301,7 @@ void testFun(void)
                 goto LINE_2;
             }
             if ((ICTStep & 0x0004) == 0) {
-                printf("ICTStep:0x0004-->05V\t");
+                normal_info("ICTStep:0x0004-->05V\t");
                 _status_ICT.VALUE_05V = ADCVAlueAverage[1] * 330 * 20 / 2.49 / 4095;
                 _status_ICT.VALUE_05V = BEBufToUint16((uint8_t *)&_status_ICT.VALUE_05V);
                 if (abs(ADCVAlueAverage[1] - VOL_05V) > 125) {  // VOL_05V
@@ -337,7 +327,7 @@ void testFun(void)
                 goto LINE_2;
             }
             if ((ICTStep & 0x0010) == 0) {
-                printf("ICTStep:0x0010-->3.3V\t");
+                normal_info("ICTStep:0x0010-->3.3V\t");
                 _status_ICT.VALUE_3_3V = ADCVAlueAverage[1] * 330 * 20 / 2.49 / 4095;
                 _status_ICT.VALUE_3_3V = BEBufToUint16((uint8_t *)&_status_ICT.VALUE_3_3V);
                 if (abs(ADCVAlueAverage[1] - VOL_3_3V) > 125) {  // VOL_3_3V
@@ -363,7 +353,7 @@ void testFun(void)
                 goto LINE_2;
             }
             if ((ICTStep & 0x0040) == 0) {
-                printf("ICTStep:0x0040-->EEV12V\t");
+                normal_info("ICTStep:0x0040-->EEV12V\t");
                 _status_ICT.VALUE_EEV12V = ADCVAlueAverage[1] * 330 * 20 / 2.49 / 4095;
                 _status_ICT.VALUE_EEV12V = BEBufToUint16((uint8_t *)&_status_ICT.VALUE_EEV12V);
                 if (abs(ADCVAlueAverage[1] - VOL_EEV12V) > 125) {  // VOL_EEV12V
@@ -373,12 +363,10 @@ void testFun(void)
                 printf("AI:%d\tv:%.04fv\r\n", ADCVAlueAverage[1], (float)(ADCVAlueAverage[1] * 3.3 * 20 / 2.49 / 4095));
                 ICTStep |= 0x0040;
                 if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA020, 4, (uint8_t *)(&_status_ICT.VALUE_12V)) == 1) {
-                    // printf("**HMIAddr WriteParam 10H OK line:%d\r\n", __LINE__);
                 } else {
                     error_info("hmi write10 error\r\n");
                 }
-
-                printf("ICT_test:%04x\r\n", ICT_test);
+                normal_info("ICTStep[%04x]ICT_test(value):%04x\r\n", ICTStep, ICT_test);
                 goto LINE_2;
             }
         LINE_2:  // DI DO  AI AO
@@ -391,7 +379,7 @@ void testFun(void)
                 goto LINE3;
             }
             if ((ICTStep & 0x0080) == 0) {
-                printf("ICTStep:0x0080-->");
+                normal_info("ICTStep:0x0080-->");
                 if (MODH_WriteParam_06H(SlaveBoardAddr, 264, 0xffff) == 1) {
                     printf("change DI polarity OK\r\n");
                     timeout[1]   = 0;
@@ -402,7 +390,7 @@ void testFun(void)
                     error_info("write06 error\r\n");
                     goto LINE3;
                 }
-                printf("ICTStep:0x0080-->");
+                normal_info("ICTStep:0x0080-->");
                 if (MODH_WriteParam_06H(SlaveBoardAddr, 366, 0) == 1) {
                     printf("change 878, 0 OK\r\n");
                     timeout[1]   = 0;
@@ -413,7 +401,7 @@ void testFun(void)
                     error_info("write06 error\r\n");
                     goto LINE3;
                 }
-                printf("ICTStep:0x0080-->");
+                normal_info("ICTStep:0x0080-->");
                 if (MODH_WriteParam_06H(SlaveBoardAddr, 267, 0xffff) == 1) {
                     printf("change DI mask OK\r\n");
                     timeout[1]  = 0;
@@ -605,6 +593,7 @@ void testFun(void)
                 goto LINE3;
             }
         LINE3:  // Connectivity
+            break;
             if (ICTStep == 0x3fff) {
                 if (!UARTOKP2FLAG) {
                     ICT_test |= UART_P2_ERROR;
@@ -685,7 +674,7 @@ void testFun(void)
             } else {
                 error_info("hmi write06 error\r\n");
             }
-            printf("ICT_STOP\r\n\n");
+            normal_info("ICT_STOP\r\n\n");
 
             NO1(GPIO_PIN_RESET);
             NO2(GPIO_PIN_RESET);

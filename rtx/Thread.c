@@ -174,32 +174,26 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
               the HAL_UARTEx_RxEventCallback can be implemented in the user file.
      */
     if (huart == &huart4) {
-        if (RESET != __HAL_UART_GET_FLAG(&huart4, UART_FLAG_IDLE))  // 判断是否是空闲中断
-        {
-            if (Size > 0) {
-                if (rx4Count + Size > BUFFER_SIZE)
-                    rx4Count = 0;
-                memcpy(rx4Buffer + rx4Count, rx4DMAbuffer, Size);
-                rx4Count += Size;
-                osMessagePut(mid_MsgQueue, 4, 0);  // Send Message
-            }
-            memset(rx4DMAbuffer, 0, Size);                                     // 清零接收缓冲区
-            uartDMAStart(&hdma_uart4_rx, &huart4, rx4DMAbuffer, BUFFER_SIZE);  // 重新打开DMA接收
+        if (Size > 0) {
+            if (rx4Count + Size > BUFFER_SIZE)
+                rx4Count = 0;
+            memcpy(rx4Buffer + rx4Count, rx4DMAbuffer, Size);
+            rx4Count += Size;
+            osMessagePut(mid_MsgQueue, 4, 0);  // Send Message
+            memset(rx4DMAbuffer, 0, Size);     // 清零接收缓冲区
         }
+        uartDMAStart(&hdma_uart4_rx, &huart4, rx4DMAbuffer, BUFFER_SIZE);  // 重新打开DMA接收
     }
     if (huart == &huart2) {
-        if (RESET != __HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE))  // 判断是否是空闲中断
-        {
-            if (Size > 0) {
-                if (rx2Count + Size > BUFFER_SIZE)
-                    rx2Count = 0;
-                memcpy(rx2Buffer + rx2Count, rx2DMAbuffer, Size);
-                rx2Count += Size;
-                osMessagePut(mid_MsgQueue, 2, 0);  // Send Message
-            }
-            memset(rx2DMAbuffer, 0, Size);                                      // 清零接收缓冲区
-            uartDMAStart(&hdma_usart2_rx, &huart2, rx2DMAbuffer, BUFFER_SIZE);  // 重新打开DMA接收
+        if (Size > 0) {
+            if (rx2Count + Size > BUFFER_SIZE)
+                rx2Count = 0;
+            memcpy(rx2Buffer + rx2Count, rx2DMAbuffer, Size);
+            rx2Count += Size;
+            osMessagePut(mid_MsgQueue, 2, 0);  // Send Message
+            memset(rx2DMAbuffer, 0, Size);     // 清零接收缓冲区
         }
+        uartDMAStart(&hdma_usart2_rx, &huart2, rx2DMAbuffer, BUFFER_SIZE);  // 重新打开DMA接收
     }
 }
 static void uartDMAStart(DMA_HandleTypeDef *hdma, UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size)

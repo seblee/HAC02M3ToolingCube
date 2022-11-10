@@ -66,6 +66,18 @@
 #define UART_DIR4_TX  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET)
 #define UART_DIR4_RX  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET)
 /* Private macro -------------------------------------------------------------*/
+/* Public macro -------------------------------------------------------------*/
+#define __DEBUG
+#ifdef __DEBUG
+extern __IO uint32_t uwTick;
+#define normal_info(format, ...)  printf("[%d][%d]:\033[32m" format "\033[32;0m", uwTick, __LINE__, ##__VA_ARGS__)
+#define warning_info(format, ...) printf("[%d][%d]:\033[33m" format "\033[32;0m", uwTick, __LINE__, ##__VA_ARGS__)
+#define error_info(format, ...)   printf("[%d][%d]:\033[31m" format "\033[32;0m", uwTick, __LINE__, ##__VA_ARGS__)
+#else
+#define normal_info(format, ...)
+#define warn_info(format, ...)
+#define error_info(format, ...)
+#endif
 
 /* Private variables ---------------------------------------------------------*/
 
