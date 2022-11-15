@@ -80,32 +80,41 @@ enum {
 };
 
 typedef struct {
-    uint8_t  u8ICT_PowerKey;  //开始测试
-    uint8_t  u8ICT_Fsm;       //测试
-    uint16_t u16ICT_Delay;    //测试
-    uint8_t  u8ICT_Start;     //测试
+    uint8_t  u8ICT_PowerKey;  // 开始测试
+    uint8_t  u8ICT_Fsm;       // 测试
+    uint16_t u16ICT_Delay;    // 测试
+    uint8_t  u8ICT_Start;     // 测试
 } local_reg_st;
 
 enum {
-    NTC1Flag   = 0x0001,
-    NTC2Flag   = 0x0002,
-    NTC3Flag   = 0x0004,
-    NTC4Flag   = 0x0008,
-    NTC5Flag   = 0x0010,
-    NTC6Flag   = 0x0020,
-    NTC7Flag   = 0x0040,
-    NTC8Flag   = 0x0080,
-    P2Flag     = 0x0100,
-    P24Flag    = 0X0200,
-    P29Flag    = 0X0400,
-    P28Flag    = 0X0800,
-    P3Flag     = 0X1000,
-    EEPROMFlag = 0X2000,
+    NTC1Flag    = 0x0001,
+    NTC2Flag    = 0x0002,
+    NTC3Flag    = 0x0004,
+    NTC4Flag    = 0x0008,
+    NTC5Flag    = 0x0010,
+    NTC6Flag    = 0x0020,
+    NTC7Flag    = 0x0040,
+    NTC8Flag    = 0x0080,
+    HANDOPTFlag = 0x0100,
+    MONITORFlag = 0X0200,
+    P25Flag     = 0X0400,
+    CANFlag     = 0X0800,
+    P3Flag      = 0X1000,
+    EEPROMFlag  = 0X2000,
+    EEVFlag     = 0X4000,
+};
+enum {
+    PAFlag  = 0x0001,
+    PBFlag  = 0x0002,
+    PCFlag  = 0x0004,
+    WHFlag  = 0x0008,
+    CURFlag = 0x0010,
+    FANFlag = 0x0020,
 };
 
 typedef struct {
     uint16_t VALUE_12V;     // 00
-    uint16_t VALUE_05V;     // 01;
+    uint16_t VALUE_05V;     // 01
     uint16_t VALUE_3_3V;    // 02
     uint16_t VALUE_EEV12V;  // 03
     uint16_t IO_0;          // 04
@@ -113,9 +122,15 @@ typedef struct {
     uint16_t AO1AI1;        // 06
     uint16_t AO2AI2;        // 07
     uint16_t NTC_COM;       // 08
-    uint16_t u16Test;       // 09
-    uint16_t u16Fsm;        // 0A
-    uint16_t u16Status;     // 0B
+    uint16_t power;         // 09
+    uint16_t u16Test;       // 0A
+    uint16_t u16Fsm;        // 0B
+    uint16_t u16Status;     // 0C
+    uint16_t u16Test1;      // 0D
+    uint16_t vol48V;        // 0E
+    uint16_t L1_V;          // 0F
+    uint16_t curCheck;      // 10
+    uint16_t L1_C;          // 11
 } status_st;
 
 #ifndef TRUE

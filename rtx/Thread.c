@@ -71,17 +71,26 @@ uint8_t rx4DMAbuffer[BUFFER_SIZE] = {0};
 uint8_t rx4Count                  = 0;
 uint8_t rx4Buffer[BUFFER_SIZE]    = {0};
 
+uint8_t tx1DMAbuffer[BUFFER_SIZE] = {0x0A, 0x03, 0x00, 0x16, 0x00, 0x05, 0x65, 0x76};
+uint8_t rx1DMAbuffer[BUFFER_SIZE] = {0};
+uint8_t rx1Count                  = 0;
+uint8_t rx1Buffer[BUFFER_SIZE]    = {0};
+
 CAN_TxHeaderTypeDef TxMeg;
 CAN_RxHeaderTypeDef RxMeg;
 
 /* Public variables ---------------------------------------------------------*/
-static void uartDMAStart(DMA_HandleTypeDef *hdma, UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size);
+uint16_t volFan   = 0;
+uint16_t vol48V   = 0;
+uint16_t curCheck = 0;
 /* Private function prototypes -----------------------------------------------*/
-
+static void uartDMAStart(DMA_HandleTypeDef *hdma, UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size);
 static void adcValueProcess(uint16_t *src, uint16_t *dst, uint16_t times);
 uint8_t     CANx_SendNormalData(CAN_HandleTypeDef *hcan, uint32_t ide, uint32_t rtr, uint16_t ID, uint8_t *pData, uint16_t Len);
-void        uart4_scan(void);
-void        uart4DataCheck(void);
+static void uart4_scan(void);
+static void uart4DataCheck(void);
+static void usart1Scan(void);
+static void uart1DataCheck(void);
 /* Private user code ---------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------
@@ -118,6 +127,7 @@ void Thread(void const *argument)
     // Init_Timers();
     HAL_UARTEx_ReceiveToIdle_DMA(&huart4, rx4DMAbuffer, BUFFER_SIZE);
     HAL_UARTEx_ReceiveToIdle_DMA(&huart2, rx2DMAbuffer, BUFFER_SIZE);
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx2DMAbuffer, BUFFER_SIZE);
     USART_DIR2_RX;  // 485_DIR2
     UART_DIR4_RX;   // 485_DIR4
     HAL_ADC_Start_DMA(&hadc1, (uint32_t *)ADC_Value, 6 * 20);
@@ -127,9 +137,15 @@ void Thread(void const *argument)
             adcValueProcess(ADC_Value, ADCVAlueAverage, 20);
             // CANx_SendNormalData(&hcan, CAN_ID_EXT, CAN_RTR_DATA, 0x8006, CanData, 8);
             uart4_scan();
+            usart1Scan();
             // Insert thread code here...
             // osThreadYield();  // suspend thread
         } else if (tid_ThreadEvent.status == osEventMessage) {
+            if (tid_ThreadEvent.value.v == 1) {
+                uart1DataCheck();
+                memset(rx1Buffer, rx1Count, 0);
+                rx1Count = 0;
+            }
             if (tid_ThreadEvent.value.v == 2) {
                 MODH_RxData(&g_tModH, rx2Buffer, rx2Count);
                 rx2Count = 0;
@@ -173,16 +189,16 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     /* NOTE : This function should not be modified, when the callback is needed,
               the HAL_UARTEx_RxEventCallback can be implemented in the user file.
      */
-    if (huart == &huart4) {
+    if (huart == &huart1) {
         if (Size > 0) {
-            if (rx4Count + Size > BUFFER_SIZE)
-                rx4Count = 0;
-            memcpy(rx4Buffer + rx4Count, rx4DMAbuffer, Size);
-            rx4Count += Size;
-            osMessagePut(mid_MsgQueue, 4, 0);  // Send Message
-            memset(rx4DMAbuffer, 0, Size);     // 清零接收缓冲区
+            if (rx1Count + Size > BUFFER_SIZE)
+                rx1Count = 0;
+            memcpy(rx1Buffer + rx1Count, rx1DMAbuffer, Size);
+            rx1Count += Size;
+            osMessagePut(mid_MsgQueue, 1, 0);  // Send Message
+            memset(rx1DMAbuffer, 0, Size);     // 清零接收缓冲区
         }
-        uartDMAStart(&hdma_uart4_rx, &huart4, rx4DMAbuffer, BUFFER_SIZE);  // 重新打开DMA接收
+        uartDMAStart(&hdma_usart1_rx, &huart1, rx1DMAbuffer, BUFFER_SIZE);  // 重新打开DMA接收
     }
     if (huart == &huart2) {
         if (Size > 0) {
@@ -195,6 +211,17 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         }
         uartDMAStart(&hdma_usart2_rx, &huart2, rx2DMAbuffer, BUFFER_SIZE);  // 重新打开DMA接收
     }
+    if (huart == &huart4) {
+        if (Size > 0) {
+            if (rx4Count + Size > BUFFER_SIZE)
+                rx4Count = 0;
+            memcpy(rx4Buffer + rx4Count, rx4DMAbuffer, Size);
+            rx4Count += Size;
+            osMessagePut(mid_MsgQueue, 4, 0);  // Send Message
+            memset(rx4DMAbuffer, 0, Size);     // 清零接收缓冲区
+        }
+        uartDMAStart(&hdma_uart4_rx, &huart4, rx4DMAbuffer, BUFFER_SIZE);  // 重新打开DMA接收
+    }
 }
 static void uartDMAStart(DMA_HandleTypeDef *hdma, UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size)
 {
@@ -206,6 +233,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
     /* Prevent unused argument(s) compilation warning */
     UNUSED(huart);
+    if (huart == &huart1) {
+        USART_DIR1_RX;  // 485_DIR1
+    }
     if (huart == &huart2) {
         USART_DIR2_RX;  // 485_DIR2
     }
@@ -227,7 +257,10 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     if (HAL_UART_GetError(huart) & HAL_UART_ERROR_ORE) {
         __HAL_UART_FLUSH_DRREGISTER(huart);  // 读DR寄存器，就可以清除ORE错误标志位
     }
-    if (huart == &huart2) {
+    if (huart == &huart1) {
+        uartDMAStart(&hdma_usart1_rx, &huart1, rx1DMAbuffer, BUFFER_SIZE);
+        USART_DIR1_RX;
+    } else if (huart == &huart2) {
         uartDMAStart(&hdma_usart2_rx, &huart2, rx2DMAbuffer, BUFFER_SIZE);
         USART_DIR2_RX;
     } else if (huart == &huart4) {
@@ -274,7 +307,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     {
         HAL_RetVal = HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxMeg, Data);
         if (HAL_OK == HAL_RetVal) {
-            CANOKP28FLAG = 1;
+            CAN_OK_Flag = 1;
             printf("%08x ", RxMeg.Timestamp);
             if (RxMeg.IDE == CAN_ID_STD) {
                 if (RxMeg.StdId == 0x601) {
@@ -338,7 +371,7 @@ uint8_t CANx_SendNormalData(CAN_HandleTypeDef *hcan, uint32_t ide, uint32_t rtr,
     return 0;
 }
 
-void uart4_scan(void)
+static void uart4_scan(void)
 {
     uint16_t crc;
     tx4DMAbuffer[0] = 0x01;
@@ -354,14 +387,37 @@ void uart4_scan(void)
     HAL_UART_Transmit_DMA(&huart4, tx4DMAbuffer, 8);
 }
 
-void uart4DataCheck(void)
+static void uart4DataCheck(void)
 {
     uint8_t  cache[10] = {0x01, 0x03, 0x02, 0x00, 0x00};
     uint8_t *p         = searchData(rx4Buffer, rx4Count, 0x01);
     if (p && ((p - rx4Buffer) < (rx4Count - 5))) {
         if (memcmp(cache, p, 5) == 0) {
-            UARTOKP29FLAG = 1;
+            MONITOR_OK_FLAG = 1;
         }
     } else {
+    }
+}
+
+static void usart1Scan(void)
+{
+    static uint8_t count = 0;
+    if (++count > 10)  // 100ms*10
+    {
+        count = 0;
+        USART_DIR1_TX;
+        HAL_UART_Transmit_DMA(&huart1, tx1DMAbuffer, 8);
+    }
+}
+
+static void uart1DataCheck(void)
+{
+    if (CRC16_Modbus(rx1Buffer, rx1Count) == 0) {
+        volFan   = rx1Buffer[3] << 8 | rx1Buffer[4];
+        vol48V   = rx1Buffer[5] << 8 | rx1Buffer[6];
+        curCheck = rx1Buffer[11] << 8 | rx1Buffer[12];
+        // normal_info("volFan:%d,vol48V:%d,curCheck:%d,\r\n", volFan, vol48V, curCheck);
+    } else {
+        warning_info("crc error\r\n");
     }
 }
