@@ -232,9 +232,13 @@ static void testFun(void)
                 _status_ICT.power        = 0;  // 09
                 _status_ICT.u16Test      = 0;  // 0A
                 _status_ICT.u16Test1     = 0;  // 0d
+                _status_ICT.vol48V       = 0;  // 0E
+                _status_ICT.L1_V         = 0;  // 0F
+                _status_ICT.curCheck     = 0;  // 10
+                _status_ICT.L1_C         = 0;  // 11
 
-                _status_ICT.u16Fsm    = ICT_ST_START;  // 0A
-                _status_ICT.u16Status = ICT_START;     // 0B
+                _status_ICT.u16Fsm    = ICT_ST_START;  // 0B
+                _status_ICT.u16Status = ICT_START;     // 0C
 
                 NO1(GPIO_PIN_SET);
                 NO2(GPIO_PIN_RESET);
@@ -275,7 +279,12 @@ static void testFun(void)
                  * clear data;
                  * @brief
                  */
-                if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA020, 18, (uint8_t *)(&_status_ICT.VALUE_12V)) == 1) {
+                if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA020, 11, (uint8_t *)(&_status_ICT.VALUE_12V)) == 1) {
+                    // printf("**HMIAddr WriteParam 10H OK line:%d\r\n", __LINE__);
+                } else {
+                    error_info("hmi write10 error\r\n");
+                }
+                if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA02d, 5, (uint8_t *)(&_status_ICT.u16Test1)) == 1) {
                     // printf("**HMIAddr WriteParam 10H OK line:%d\r\n", __LINE__);
                 } else {
                     error_info("hmi write10 error\r\n");
@@ -396,7 +405,8 @@ static void testFun(void)
                 if (timeout[1] > 10) {
                     ICTStep |= 0x7f80;
                     ICT_test |=
-                        (DIAT_0_ERROR | DIAT_1_ERROR | AO1AI1_ERROR | AO2AI2_ERROR | NTC_ERROR | UART_HANDOPT_ERROR | UART_MONITOR_ERROR | UART_P25_ERROR | COM_P3_ERROR | EEPROM_ERROR | POWER_ERROR);
+                        DIAT_0_ERROR | DIAT_1_ERROR | AO1AI1_ERROR | AO2AI2_ERROR | NTC_ERROR | UART_HANDOPT_ERROR | UART_MONITOR_ERROR | UART_P25_ERROR | COM_P3_ERROR | EEPROM_ERROR | POWER_ERROR;
+                    ICT_test1 |= EEV_ERROR | AC48V_ERROR | CUR_ERROR;
                 }
                 goto LINE3;
             }
@@ -487,32 +497,34 @@ static void testFun(void)
                     if (g_tVar[SlaveBoardAddr - 1].P01[0] != 0x07f3) {  //**************
                         ICT_test |= DIAT_1_ERROR;
                     }
+                    timeout[1] = 0;
                 } else {
-                    timeout[1]++;
                     error_info("write03 error\r\n");
+                    timeout[1]++;
                     ICTDelay[1] = 60;
                     goto LINE3;
                 }
 
                 if (MODH_ReadParam_03H(SlaveBoardAddr, 836, 1) == 1) {
-                    printf("ICTStep:0x0100-->L1 v:%d\r\n", g_tVar[SlaveBoardAddr - 1].P01[0]);
+                    normal_info("ICTStep:0x0400-->L1 v:%d vol48V:%d\r\n", g_tVar[SlaveBoardAddr - 1].P01[0], vol48V);
+                    _status_ICT.vol48V = BEBufToUint16((uint8_t *)&vol48V);
+                    _status_ICT.L1_V   = BEBufToUint16((uint8_t *)&g_tVar[SlaveBoardAddr - 1].P01[0]);
                     if (abs(g_tVar[SlaveBoardAddr - 1].P01[0] - vol48V) > 20) {
                         ICT_test |= POWER_ERROR;
+                        ICT_test1 |= AC48V_ERROR;
                         error_info("PAFlag error\r\n");
-
                     } else {
                         _status_ICT.power |= PAFlag;
-                        _status_ICT.vol48V = vol48V;
-                        _status_ICT.L1_V   = g_tVar[SlaveBoardAddr - 1].P01[0];
                     }
+                    timeout[1] = 0;
                 } else {
-                    error_info("ICTStep:0x0100-->read03H error\r\n");
+                    error_info("ICTStep:0x0400-->read03H error\r\n");
                     timeout[1]++;
                     ICTDelay[1] = 60;
                     goto LINE3;
                 }
                 if (MODH_ReadParam_03H(SlaveBoardAddr, 840, 2) == 1) {
-                    printf("ICTStep:0x0400--CURRENT:%04X,%d\r\n", g_tVar[SlaveBoardAddr - 1].P01[0], g_tVar[SlaveBoardAddr - 1].P01[1]);
+                    normal_info("ICTStep:0x0400--CURRENT:%04X,L_C:%d,Cur%d,fanV:%d\r\n", g_tVar[SlaveBoardAddr - 1].P01[0], g_tVar[SlaveBoardAddr - 1].P01[1], curCheck, volFan);
 
                     if (g_tVar[SlaveBoardAddr - 1].P01[0] & 0x0004) {
                         ICT_test |= POWER_ERROR;
@@ -534,30 +546,31 @@ static void testFun(void)
                     }
                     if (abs(g_tVar[SlaveBoardAddr - 1].P01[1] - curCheck) > 500) {
                         ICT_test |= POWER_ERROR;
-                        error_info("FANFlag error\r\n");
+                        ICT_test1 |= CUR_ERROR;
+                        error_info("CURFlag error\r\n");
                     } else {
                         _status_ICT.power |= CURFlag;
                     }
                     if (abs(volFan - 330) > 50) {
                         ICT_test |= POWER_ERROR;
-                        error_info("CURFlag error\r\n");
+                        error_info("FANFlag error vol \r\n");
                     } else {
                         _status_ICT.power |= FANFlag;
                     }
-                    _status_ICT.curCheck = curCheck;
-                    _status_ICT.L1_C     = g_tVar[SlaveBoardAddr - 1].P01[1];
+                    _status_ICT.curCheck = BEBufToUint16((uint8_t *)&curCheck);
+                    _status_ICT.L1_C     = BEBufToUint16((uint8_t *)&g_tVar[SlaveBoardAddr - 1].P01[1]);
 
-                    if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA02e, 4, (uint8_t *)(&_status_ICT.vol48V)) == 1) {
+                    if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA02d, 5, (uint8_t *)(&_status_ICT.u16Test1)) == 1) {
                         // printf("**HMIAddr WriteParam 10H OK line:%d\r\n", __LINE__);
+                        timeout[1] = 0;
                     } else {
                         error_info("hmi write10 error\r\n");
+                        timeout[1]++;
+                        ICTDelay[1] = 60;
+                        goto LINE3;
                     }
-
-                    NO6(GPIO_PIN_RESET);
-                    NO7(GPIO_PIN_RESET);
-
                 } else {
-                    error_info("ICTStep:0x0100-->read03H error\r\n");
+                    error_info("ICTStep:0x0400-->read03H error\r\n");
                     timeout[1]++;
                     ICTDelay[1] = 60;
                     goto LINE3;
@@ -566,8 +579,9 @@ static void testFun(void)
                     printf("0101 EEV set H\r\n");
                     timeout[1] = 0;
                 } else {
-                    printf("write06 error\r\n");
+                    error_info("write06 error\r\n");
                     ICTDelay[1] = 60;
+                    timeout[1]++;
                     goto LINE3;
                 }
 
@@ -591,16 +605,21 @@ static void testFun(void)
                     } else {
                         error_info("hmi write10 error\r\n");
                     }
+                    timeout[1] = 0;
                 } else {
                     error_info("write03 error\r\n");
+                    timeout[1]++;
                     ICTDelay[1] = 60;
+                    goto LINE3;
                 }
+                normal_info("turn off 48V\r\n");
+                NO6(GPIO_PIN_RESET);
+                NO7(GPIO_PIN_RESET);
                 goto LINE3;
             }
             if ((ICTStep & 0x0800) == 0) {
                 printf("ICTStep:0x0800-->");
-                if (MODH_ReadParam_03H(SlaveBoardAddr, 871, 6) == 1)  // NTC
-                {
+                if (MODH_ReadParam_03H(SlaveBoardAddr, 871, 6) == 1) {  // NTC
                     printf("NTC:1 OK,%0d,%0d,%0d,%0d\r\n", g_tVar[SlaveBoardAddr - 1].P01[0], g_tVar[SlaveBoardAddr - 1].P01[2], g_tVar[SlaveBoardAddr - 1].P01[4], g_tVar[SlaveBoardAddr - 1].P01[5]);
 
                     if (abs(g_tVar[SlaveBoardAddr - 1].P01[0] - 255) > 20)
@@ -622,8 +641,11 @@ static void testFun(void)
                         ICT_test |= NTC_ERROR;
                     else
                         _status_ICT.NTC_COM |= NTC4Flag;
+                    timeout[1] = 0;
                 } else {
                     error_info("write03 error\r\n");
+                    timeout[1]++;
+                    ICTDelay[1] = 60;
                     goto LINE3;
                 }
                 EEV_ON_VALUE = eevDIGet();
@@ -645,8 +667,12 @@ static void testFun(void)
                     if ((g_tVar[SlaveBoardAddr - 1].P01[4] > 5) && (g_tVar[SlaveBoardAddr - 1].P01[5] < 1001)) {
                         UARTOKP25FLAG = 1;
                     }
+                    timeout[1] = 0;
                 } else {
                     error_info("write03 error\r\n");
+                    timeout[1]++;
+                    ICTDelay[1] = 60;
+                    goto LINE3;
                 }
                 goto LINE3;
             }
@@ -752,7 +778,7 @@ static void testFun(void)
                 } else {
                     _status_ICT.u16Fsm = ICT_ST_OK;
                 }
-                if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA028, 6, (uint8_t *)(&_status_ICT.NTC_COM)) == 1) {
+                if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA028, 2, (uint8_t *)(&_status_ICT.NTC_COM)) == 1) {
                     // printf("**HMIAddr WriteParam 10H OK line:%d\r\n", __LINE__);
                 } else {
                     error_info("hmi write10 error\r\n");
