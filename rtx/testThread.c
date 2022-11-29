@@ -245,8 +245,8 @@ static void testFun(void)
                 NO3(GPIO_PIN_RESET);
                 NO4(GPIO_PIN_RESET);
                 NO5(GPIO_PIN_RESET);
-                NO6(GPIO_PIN_SET);
-                NO7(GPIO_PIN_SET);
+                NO6(GPIO_PIN_RESET);
+                NO7(GPIO_PIN_RESET);
                 NO8(GPIO_PIN_SET);
 
                 ICT_test           = 0;
@@ -291,6 +291,8 @@ static void testFun(void)
                 }
                 l_sys.u16ICT_Delay    = 300;  // wait AI ready
                 _status_ICT.u16Status = ICT_TEST;
+                NO6(GPIO_PIN_SET);
+                NO7(GPIO_PIN_SET);
             }
             break;
         }
