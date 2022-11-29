@@ -402,7 +402,7 @@ static void testFun(void)
         LINE_2:  // DI DO  AI AO
             if (ICTDelay[1]) {
                 ICTDelay[1]--;
-                if (timeout[1] > 10) {
+                if (timeout[1] > 5) {
                     ICTStep |= 0x7f80;
                     ICT_test |=
                         DIAT_0_ERROR | DIAT_1_ERROR | AO1AI1_ERROR | AO2AI2_ERROR | NTC_ERROR | UART_HANDOPT_ERROR | UART_MONITOR_ERROR | UART_P25_ERROR | COM_P3_ERROR | EEPROM_ERROR | POWER_ERROR;
@@ -454,7 +454,6 @@ static void testFun(void)
                     if (g_tVar[SlaveBoardAddr - 1].P01[0] != 0x0000) {  //**************
                         ICT_test |= DIAT_0_ERROR;
                     }
-                    timeout[1] = 0;
                 } else {
                     error_info("ICTStep:0x0100-->read03H error\r\n");
                     timeout[1]++;
@@ -463,7 +462,6 @@ static void testFun(void)
                 }
                 if (MODH_WriteParam_06H(SlaveBoardAddr, 262, 1) == 1) {  // test mode
                     printf("ICTStep:0x0100-->testmode OK\r\n");
-                    timeout[1] = 0;
                 } else {
                     error_info("ICTStep:0x0100-->write06 error\r\n");
                     ICTDelay[1] = 60;
@@ -497,7 +495,6 @@ static void testFun(void)
                     if (g_tVar[SlaveBoardAddr - 1].P01[0] != 0x07f3) {  //**************
                         ICT_test |= DIAT_1_ERROR;
                     }
-                    timeout[1] = 0;
                 } else {
                     error_info("write03 error\r\n");
                     timeout[1]++;
@@ -516,7 +513,6 @@ static void testFun(void)
                     } else {
                         _status_ICT.power |= PAFlag;
                     }
-                    timeout[1] = 0;
                 } else {
                     error_info("ICTStep:0x0400-->read03H error\r\n");
                     timeout[1]++;
@@ -560,9 +556,10 @@ static void testFun(void)
                     _status_ICT.curCheck = BEBufToUint16((uint8_t *)&curCheck);
                     _status_ICT.L1_C     = BEBufToUint16((uint8_t *)&g_tVar[SlaveBoardAddr - 1].P01[1]);
 
+                    osDelay(50);
                     if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA02d, 5, (uint8_t *)(&_status_ICT.u16Test1)) == 1) {
                         // printf("**HMIAddr WriteParam 10H OK line:%d\r\n", __LINE__);
-                        timeout[1] = 0;
+                        osDelay(50);
                     } else {
                         error_info("hmi write10 error\r\n");
                         timeout[1]++;
@@ -577,7 +574,7 @@ static void testFun(void)
                 }
                 if (MODH_WriteParam_06H(SlaveBoardAddr, 721, 0x0102) == 1) {  // EEV H
                     printf("0101 EEV set H\r\n");
-                    timeout[1] = 0;
+                    osDelay(50);
                 } else {
                     error_info("write06 error\r\n");
                     ICTDelay[1] = 60;
@@ -605,7 +602,6 @@ static void testFun(void)
                     } else {
                         error_info("hmi write10 error\r\n");
                     }
-                    timeout[1] = 0;
                 } else {
                     error_info("write03 error\r\n");
                     timeout[1]++;
@@ -778,10 +774,15 @@ static void testFun(void)
                 } else {
                     _status_ICT.u16Fsm = ICT_ST_OK;
                 }
-                if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA028, 2, (uint8_t *)(&_status_ICT.NTC_COM)) == 1) {
+                if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA028, 3, (uint8_t *)(&_status_ICT.NTC_COM)) == 1) {
                     // printf("**HMIAddr WriteParam 10H OK line:%d\r\n", __LINE__);
                 } else {
                     error_info("hmi write10 error\r\n");
+                }
+                if (MODH_WriteParam_10H(SlaveHMIAddr, 0xA02D, 1, (uint8_t *)&_status_ICT.u16Test1) == 1) {
+                    // printf("**HMIAddr WriteParam 06H OK line:%d\r\n",__LINE__);
+                } else {
+                    error_info("hmi write06 error\r\n");
                 }
 
                 timeout[1] = 0;

@@ -1,3 +1,4 @@
 .vscode
 MDK-ARM/HAC02M3ToolingCube
 MDK-ARM/*.uvguix.*
+JLinkLog.txt
